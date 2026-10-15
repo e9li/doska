@@ -73,6 +73,29 @@ final class NoteControllerTest extends TestCase
         self::assertSame('templates/public/login.html.twig', $note['elements'][0]['stack'][0]['caller']['file']);
     }
 
+    public function testTheListKeepsClosedNotes(): void
+    {
+        $created = $this->controller()->create($this->request(['text' => 'Make the heading larger']));
+        $id = json_decode((string) $created->getContent(), true, 8, JSON_THROW_ON_ERROR)['id'];
+        $store = new NoteStore($this->dir);
+        $store->acknowledge($id);
+        $store->resolve($id, 'Increased the heading size.');
+
+        $response = $this->controller()->index(Request::create('/_doska/notes', 'GET', server: ['REMOTE_ADDR' => '127.0.0.1']));
+        self::assertSame(200, $response->getStatusCode());
+        $notes = json_decode((string) $response->getContent(), true, 16, JSON_THROW_ON_ERROR)['notes'];
+        self::assertSame('resolved', $notes[0]['status']);
+        self::assertSame('Increased the heading size.', $notes[0]['replies'][0]['text']);
+    }
+
+    public function testARemoteListIsRefused(): void
+    {
+        $request = Request::create('/_doska/notes', 'GET', server: ['REMOTE_ADDR' => '203.0.113.8']);
+
+        self::assertSame(403, $this->controller()->index($request)->getStatusCode());
+        self::assertSame(200, $this->controller(true)->index($request)->getStatusCode());
+    }
+
     public function testAnEmptyNoteIsRejected(): void
     {
         $response = $this->controller()->create($this->request(['text' => '   ', 'elements' => []]));

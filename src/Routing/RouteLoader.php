@@ -41,6 +41,11 @@ final class RouteLoader
             '_stateless' => true,
         ], methods: ['POST']));
 
+        $routes->add('_doska_notes_list', new Route('/_doska/notes', [
+            '_controller' => NoteController::class.'::index',
+            '_stateless' => true,
+        ], methods: ['GET', 'HEAD']));
+
         $routes->add('_doska_mcp', new Route('/_doska/mcp', [
             '_controller' => McpController::class.'::__invoke',
             '_stateless' => true,

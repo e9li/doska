@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Accepts the toolbar's Send action. The toolbar does not speak MCP.
+ * The toolbar posts a note here and reads the list back. It does not speak MCP.
  */
 final class NoteController
 {
@@ -19,6 +19,15 @@ final class NoteController
         private readonly NoteStore $notes,
         private readonly bool $allowRemoteAccess,
     ) {
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        if (!Loopback::allows($request, $this->allowRemoteAccess)) {
+            return new JsonResponse(['error' => 'Doska answers only on loopback.'], 403);
+        }
+
+        return new JsonResponse(['notes' => $this->notes->all()]);
     }
 
     public function create(Request $request): JsonResponse

@@ -334,7 +334,55 @@ function readConfig(host) {
 }
 
 const DOCKS = ["top", "right", "bottom", "left"];
-const PANEL_FOR_TOOL = { inspect: "composer", a11y: "a11y", settings: "settings" };
+const PANEL_FOR_TOOL = { inspect: "composer", a11y: "a11y", notes: "notes", settings: "settings" };
+const NOTE_STATUSES = ["pending", "acknowledged", "resolved", "dismissed"];
+const NOTE_LABELS = {
+    pending: "Pending",
+    acknowledged: "Acknowledged",
+    resolved: "Resolved",
+    dismissed: "Dismissed",
+};
+
+function notePreview(text) {
+    return (text || "").replace(/\[selected_element\]\(reference#\d+\)/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function notePath(url) {
+    try {
+        const target = new URL(url, location.href);
+        return target.pathname + target.search;
+    } catch {
+        return "";
+    }
+}
+
+function samePage(url) {
+    try {
+        const target = new URL(url, location.href);
+        return target.origin === location.origin && target.pathname === location.pathname && target.search === location.search;
+    } catch {
+        return false;
+    }
+}
+
+function timeAgo(iso) {
+    const then = Date.parse(iso || "");
+    if (Number.isNaN(then)) {
+        return "";
+    }
+    const minutes = Math.round((Date.now() - then) / 60000);
+    if (minutes < 1) {
+        return "just now";
+    }
+    if (minutes < 60) {
+        return minutes + "m";
+    }
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) {
+        return hours + "h";
+    }
+    return Math.round(hours / 24) + "d";
+}
 
 function storedDock() {
     try {
@@ -661,6 +709,7 @@ const MARK = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"
 const ICON_INSPECT = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M13.9093 12.3603L17.0007 20.8537L14.1816 21.8798L11.0902 13.3864L6.91797 16.5422L8.4087 1.63318L19.134 12.0959L13.9093 12.3603Z"></path></svg>';
 const ICON_A11Y = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M4 12C4 7.58172 7.58172 4 12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12ZM12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 8.5C12.8284 8.5 13.5 7.82843 13.5 7C13.5 6.17157 12.8284 5.5 12 5.5C11.1716 5.5 10.5 6.17157 10.5 7C10.5 7.82843 11.1716 8.5 12 8.5ZM12 9.49988C10.4427 9.49988 8.82151 9.14306 7.37106 8.57129L6.62891 10.4285C7.70479 10.8579 8.8573 11.1468 9.99989 11.3301C9.99989 12.2004 10.0849 13.0939 9.68317 13.8974L8.10546 17.0528L9.89432 17.9472L11.4471 14.8416C11.5518 14.6322 11.7658 14.5 11.9999 14.5C12.234 14.5 12.448 14.6323 12.5527 14.8416L14.1055 17.9472L15.8943 17.0528L14.3166 13.8974C13.9149 13.0939 13.9999 12.2004 13.9999 11.3301C15.1409 11.1471 16.2818 10.8534 17.359 10.4332C17.3843 10.4233 16.6291 8.57118 16.6264 8.57225C15.1728 9.13901 13.5595 9.49988 12 9.49988Z"></path></svg>';
 const ICON_GEAR = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M3.33946 17.0002C2.90721 16.2515 2.58277 15.4702 2.36133 14.6741C3.3338 14.1779 3.99972 13.1668 3.99972 12.0002C3.99972 10.8345 3.3348 9.824 2.36353 9.32741C2.81025 7.71651 3.65857 6.21627 4.86474 4.99001C5.7807 5.58416 6.98935 5.65534 7.99972 5.072C9.01009 4.48866 9.55277 3.40635 9.4962 2.31604C11.1613 1.8846 12.8847 1.90004 14.5031 2.31862C14.4475 3.40806 14.9901 4.48912 15.9997 5.072C17.0101 5.65532 18.2187 5.58416 19.1346 4.99007C19.7133 5.57986 20.2277 6.25151 20.66 7.00021C21.0922 7.7489 21.4167 8.53025 21.6381 9.32628C20.6656 9.82247 19.9997 10.8336 19.9997 12.0002C19.9997 13.166 20.6646 14.1764 21.6359 14.673C21.1892 16.2839 20.3409 17.7841 19.1347 19.0104C18.2187 18.4163 17.0101 18.3451 15.9997 18.9284C14.9893 19.5117 14.4467 20.5941 14.5032 21.6844C12.8382 22.1158 11.1148 22.1004 9.49633 21.6818C9.55191 20.5923 9.00929 19.5113 7.99972 18.9284C6.98938 18.3451 5.78079 18.4162 4.86484 19.0103C4.28617 18.4205 3.77172 17.7489 3.33946 17.0002ZM8.99972 17.1964C10.0911 17.8265 10.8749 18.8227 11.2503 19.9659C11.7486 20.0133 12.2502 20.014 12.7486 19.9675C13.1238 18.8237 13.9078 17.8268 14.9997 17.1964C16.0916 16.5659 17.347 16.3855 18.5252 16.6324C18.8146 16.224 19.0648 15.7892 19.2729 15.334C18.4706 14.4373 17.9997 13.2604 17.9997 12.0002C17.9997 10.74 18.4706 9.5632 19.2729 8.6665C19.1688 8.4405 19.0538 8.21822 18.9279 8.00021C18.802 7.78219 18.667 7.57148 18.5233 7.36842C17.3457 7.61476 16.0911 7.43414 14.9997 6.80405C13.9083 6.17395 13.1246 5.17768 12.7491 4.03455C12.2509 3.98714 11.7492 3.98646 11.2509 4.03292C10.8756 5.17671 10.0916 6.17364 8.99972 6.80405C7.9078 7.43447 6.65245 7.61494 5.47428 7.36803C5.18485 7.77641 4.93463 8.21117 4.72656 8.66637C5.52881 9.56311 5.99972 10.74 5.99972 12.0002C5.99972 13.2604 5.52883 14.4372 4.72656 15.3339C4.83067 15.5599 4.94564 15.7822 5.07152 16.0002C5.19739 16.2182 5.3324 16.4289 5.47612 16.632C6.65377 16.3857 7.90838 16.5663 8.99972 17.1964ZM11.9997 15.0002C10.3429 15.0002 8.99972 13.6571 8.99972 12.0002C8.99972 10.3434 10.3429 9.00021 11.9997 9.00021C13.6566 9.00021 14.9997 10.3434 14.9997 12.0002C14.9997 13.6571 13.6566 15.0002 11.9997 15.0002ZM11.9997 13.0002C12.552 13.0002 12.9997 12.5525 12.9997 12.0002C12.9997 11.4479 12.552 11.0002 11.9997 11.0002C11.4474 11.0002 10.9997 11.4479 10.9997 12.0002C10.9997 12.5525 11.4474 13.0002 11.9997 13.0002Z"></path></svg>';
+const ICON_NOTES = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M17 2V4H20.0066C20.5552 4 21 4.44495 21 4.9934V21.0066C21 21.5552 20.5551 22 20.0066 22H3.9934C3.44476 22 3 21.5551 3 21.0066V4.9934C3 4.44476 3.44495 4 3.9934 4H7V2H17ZM7 6H5V20H19V6H17V8H7V6ZM9 16V18H7V16H9ZM9 13V15H7V13H9ZM9 10V12H7V10H9ZM15 4H9V6H15V4Z"></path></svg>';
 const ICON_GRIP = '<svg viewBox="0 0 12 18" width="12" height="18" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.25"/><circle cx="9" cy="3" r="1.25"/><circle cx="3" cy="9" r="1.25"/><circle cx="9" cy="9" r="1.25"/><circle cx="3" cy="15" r="1.25"/><circle cx="9" cy="15" r="1.25"/></g></svg>';
 const ICON_COPY = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M12.5 3.5v5.2a2 2 0 0 1-2 2H4.5"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M6.6 8.2 4.2 10.7l2.4 2.6"/></svg>';
 
@@ -678,6 +727,14 @@ class DoskaToolbar extends HTMLElement {
         this.pinnedIssue = null;
         this.drag = null;
         this.issues = [];
+        this.notes = [];
+        this.noteFilter = [];
+        this.noteId = null;
+        this.notesTimer = null;
+        this.notesRequest = 0;
+        this.notesJson = "";
+        this.notesError = false;
+        this.pendingJump = null;
         this.sending = false;
         this.onMove = null;
         this.onClick = null;
@@ -708,9 +765,25 @@ class DoskaToolbar extends HTMLElement {
             }
         }
         this.attachPageListeners();
+        let jump = null;
+        try {
+            jump = sessionStorage.getItem("doska.jump");
+            if (jump) {
+                sessionStorage.removeItem("doska.jump");
+            }
+        } catch {
+            jump = null;
+        }
+        if (jump) {
+            this.pendingJump = jump;
+            this.setTool("notes");
+        } else if (this.tool === "notes") {
+            this.startNotesPoll();
+        }
     }
 
     disconnectedCallback() {
+        this.stopNotesPoll();
         this.detachPageListeners();
         this.highlight?.remove();
         this.badge?.remove();
@@ -846,6 +919,7 @@ class DoskaToolbar extends HTMLElement {
   .panel.open { display: flex; flex-direction: column; }
   .panel[data-panel="composer"],
   .panel[data-panel="a11y"] { width: 420px; }
+  .panel[data-panel="notes"] { width: 360px; }
   .panel[data-panel="settings"] { width: 260px; }
   .wrap { position: relative; padding: 14px 16px 6px; }
   .editor { min-height: 52px; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
@@ -914,7 +988,7 @@ class DoskaToolbar extends HTMLElement {
     color: #f4f4f5;
   }
   .chip span:last-child { color: #a1a1aa; }
-  .head { display: flex; align-items: baseline; gap: 8px; padding: 12px 14px 0; }
+  .head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0; flex-wrap: wrap; }
   .title { font-weight: 600; }
   .count { color: #a1a1aa; font-size: 12px; }
   .issues {
@@ -954,6 +1028,59 @@ class DoskaToolbar extends HTMLElement {
   .dock[data-dock="left"] { grid-area: left; }
   .dock[data-dock="bottom"] { grid-area: bottom; }
   .dock[data-dock="right"] { grid-area: right; }
+  .note-filters { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
+  .note-filter, .note-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    cursor: pointer;
+    color: #a1a1aa;
+    font-size: 12px;
+  }
+  .note-filter:hover, .note-back:hover { background: #2a2a30; color: #fff; }
+  .note-filter[aria-pressed="true"] { background: #2a2a30; color: #fff; }
+  .note-dot { width: 8px; height: 8px; border-radius: 99px; background: #71717a; }
+  .note-dot[data-status="pending"] { background: #3b82f6; }
+  .note-dot[data-status="acknowledged"] { background: #f59e0b; }
+  .note-dot[data-status="resolved"] { background: #22c55e; }
+  .notes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    max-height: 360px;
+    overflow: auto;
+    padding: 8px;
+  }
+  .note-card, .note-loc {
+    display: grid;
+    gap: 4px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #232328;
+    border-left: 3px solid #71717a;
+    cursor: pointer;
+  }
+  .note-card[data-status="pending"], .note-loc[data-status="pending"] { border-left-color: #3b82f6; }
+  .note-card[data-status="acknowledged"], .note-loc[data-status="acknowledged"] { border-left-color: #f59e0b; }
+  .note-card[data-status="resolved"], .note-loc[data-status="resolved"] { border-left-color: #22c55e; }
+  .note-card:hover, .note-loc:hover { background: #2a2a30; }
+  .note-top { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .note-label { font-weight: 600; }
+  .note-label[data-status="pending"] { color: #93c5fd; }
+  .note-label[data-status="acknowledged"] { color: #fbbf24; }
+  .note-label[data-status="resolved"] { color: #4ade80; }
+  .note-label[data-status="dismissed"] { color: #a1a1aa; }
+  .note-time { margin-left: auto; color: #a1a1aa; }
+  .note-foot, .note-meta { color: #a1a1aa; font-size: 12px; }
+  .note-reply { padding: 8px 10px; border-radius: 8px; background: #232328; }
+  .note-reply span { display: block; margin-top: 4px; color: #a1a1aa; font-size: 12px; }
+  .note-card, .note-loc, .note-reply, .note-comment { overflow-wrap: anywhere; min-width: 0; }
+  .note-comment { margin: 0; white-space: pre-wrap; }
 </style>
 <div class="panel" data-panel="composer">
   <div class="wrap">
@@ -980,6 +1107,16 @@ class DoskaToolbar extends HTMLElement {
     <button type="button" class="findings" data-findings><span data-findings-label>Copy findings</span></button>
   </div>
 </div>
+<div class="panel" data-panel="notes">
+  <div class="head">
+    <span class="title">Notes</span>
+    <span class="note-filters" data-note-filters></span>
+  </div>
+  <div class="notes" data-notes></div>
+  <div class="footer">
+    <button type="button" class="grip" data-grip aria-label="Drag notes panel">${ICON_GRIP}</button>
+  </div>
+</div>
 <div class="panel" data-panel="settings">
   <div class="head"><span class="title">Position</span></div>
   <div class="docks">
@@ -996,6 +1133,7 @@ class DoskaToolbar extends HTMLElement {
   <span class="mark" title="Doska">${MARK}</span>
   <button type="button" class="tool" data-tool="inspect" title="Inspect" aria-pressed="false" aria-label="Inspect">${ICON_INSPECT}</button>
   <button type="button" class="tool" data-tool="a11y" title="Accessibility" aria-pressed="false" aria-label="Accessibility">${ICON_A11Y}</button>
+  <button type="button" class="tool" data-tool="notes" title="Notes" aria-pressed="false" aria-label="Notes">${ICON_NOTES}</button>
   <button type="button" class="tool" data-tool="settings" title="Position" aria-pressed="false" aria-label="Toolbar position">${ICON_GEAR}</button>
 </div>`;
     }
@@ -1149,11 +1287,16 @@ class DoskaToolbar extends HTMLElement {
         }
         document.documentElement.style.cursor = this.inspecting ? "crosshair" : "";
         this.style.cursor = this.inspecting ? "default" : "";
-        for (const name of ["inspect", "a11y", "settings"]) {
+        for (const name of ["inspect", "a11y", "notes", "settings"]) {
             this.shadowRoot.querySelector('[data-tool="' + name + '"]').setAttribute("aria-pressed", tool === name ? "true" : "false");
         }
         if (tool === "a11y") {
             this.runScan();
+        }
+        if (tool === "notes") {
+            this.startNotesPoll();
+        } else {
+            this.stopNotesPoll();
         }
         this.showPanel(tool ? PANEL_FOR_TOOL[tool] : null);
         if (tool === "inspect") {
@@ -1184,6 +1327,20 @@ class DoskaToolbar extends HTMLElement {
             this.setDock(button.dataset.dock);
         } else if (button.dataset.issue !== undefined) {
             this.showIssue(Number(button.dataset.issue));
+        } else if (button.dataset.noteFilter) {
+            this.toggleNoteFilter(button.dataset.noteFilter);
+        } else if (button.dataset.noteId) {
+            this.chooseNote(button.dataset.noteId);
+        } else if (button.dataset.noteBack) {
+            this.noteId = null;
+            this.pinnedIssue = null;
+            this.hideOverlay();
+            this.renderNotes();
+        } else if (button.dataset.noteElement !== undefined) {
+            const note = this.notes.find((item) => item.id === this.noteId);
+            if (note) {
+                this.jumpToElement(note, Number(button.dataset.noteElement));
+            }
         }
     }
 
@@ -1224,6 +1381,13 @@ class DoskaToolbar extends HTMLElement {
         this.meta = event.metaKey || event.ctrlKey;
         if (event.type === "keydown" && event.key === "Escape" && this.tool) {
             event.preventDefault();
+            if (this.tool === "notes" && this.noteId) {
+                this.noteId = null;
+                this.pinnedIssue = null;
+                this.hideOverlay();
+                this.renderNotes();
+                return;
+            }
             this.setTool(null);
         }
     }
@@ -1507,6 +1671,276 @@ class DoskaToolbar extends HTMLElement {
                 this.findingsLabel.textContent = "Copy findings";
             }
         }, 1600);
+    }
+
+    startNotesPoll() {
+        this.stopNotesPoll();
+        if (this.notesJson !== "") {
+            this.renderNotes();
+        }
+        this.loadNotes();
+        this.notesTimer = window.setInterval(() => this.loadNotes(), 2000);
+    }
+
+    stopNotesPoll() {
+        if (this.notesTimer) {
+            window.clearInterval(this.notesTimer);
+            this.notesTimer = null;
+        }
+        this.notesRequest += 1;
+    }
+
+    async loadNotes() {
+        const token = ++this.notesRequest;
+        const url = (this.config && this.config.notes) || "/_doska/notes";
+        try {
+            const response = await fetch(url, { headers: { Accept: "application/json" } });
+            if (token !== this.notesRequest) {
+                return;
+            }
+            if (!response.ok) {
+                this.notesError = true;
+                this.notes = [];
+            } else {
+                const body = await response.json();
+                this.notes = Array.isArray(body.notes) ? body.notes : [];
+                this.notesError = false;
+            }
+        } catch {
+            if (token !== this.notesRequest) {
+                return;
+            }
+            this.notesError = true;
+            this.notes = [];
+        }
+        const next = (this.notesError ? "error:" : "ok:") + JSON.stringify(this.notes);
+        const jump = this.pendingJump && this.notes.find((item) => item.id === this.pendingJump);
+        if (jump) {
+            this.pendingJump = null;
+            this.noteId = jump.id;
+            this.notesJson = next;
+            this.renderNotes();
+            this.jumpToElement(jump, 0);
+            return;
+        }
+        if (next === this.notesJson) {
+            return;
+        }
+        this.notesJson = next;
+        this.renderNotes();
+    }
+
+    renderNotes() {
+        const filters = this.shadowRoot.querySelector("[data-note-filters]");
+        const list = this.shadowRoot.querySelector("[data-notes]");
+        if (!filters || !list) {
+            return;
+        }
+        if (this.noteId) {
+            this.renderNoteDetail(filters, list);
+            this.reanchorNotes();
+            return;
+        }
+        filters.replaceChildren();
+        for (const status of NOTE_STATUSES) {
+            const count = this.notes.filter((note) => note.status === status).length;
+            if (count === 0 && !this.noteFilter.includes(status)) {
+                continue;
+            }
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "note-filter";
+            button.dataset.noteFilter = status;
+            button.setAttribute("aria-pressed", this.noteFilter.includes(status) ? "true" : "false");
+            button.setAttribute("aria-label", NOTE_LABELS[status] + " " + count);
+            const dot = document.createElement("span");
+            dot.className = "note-dot";
+            dot.dataset.status = status;
+            const total = document.createElement("span");
+            total.textContent = String(count);
+            button.append(dot, total);
+            filters.append(button);
+        }
+        const active = this.noteFilter;
+        const visible = [...this.notes].reverse().filter((note) => active.length === 0 || active.includes(note.status));
+        list.replaceChildren();
+        if (this.notesError) {
+            list.append(this.noteEmpty("Could not load notes."));
+        } else if (this.notes.length === 0) {
+            list.append(this.noteEmpty("No notes yet."));
+        } else if (visible.length === 0) {
+            list.append(this.noteEmpty("No matching notes."));
+        } else {
+            for (const note of visible) {
+                list.append(this.noteCard(note));
+            }
+        }
+        this.reanchorNotes();
+    }
+
+    noteEmpty(message) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = message;
+        return empty;
+    }
+
+    noteCard(note) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "note-card";
+        button.dataset.noteId = note.id;
+        button.dataset.status = note.status || "pending";
+        const top = document.createElement("span");
+        top.className = "note-top";
+        const dot = document.createElement("span");
+        dot.className = "note-dot";
+        dot.dataset.status = note.status || "pending";
+        const label = document.createElement("span");
+        label.className = "note-label";
+        label.dataset.status = note.status || "pending";
+        label.textContent = NOTE_LABELS[note.status] || "Pending";
+        const time = document.createElement("span");
+        time.className = "note-time";
+        time.textContent = timeAgo(note.createdAt);
+        top.append(dot, label, time);
+        const comment = document.createElement("span");
+        comment.textContent = notePreview(note.text) || "No comment";
+        button.append(top, comment);
+        const replies = Array.isArray(note.replies) ? note.replies.length : 0;
+        const path = notePath(note.url);
+        if (path || replies > 0) {
+            const foot = document.createElement("span");
+            foot.className = "note-foot";
+            const replyText = replies === 1 ? "1 reply" : replies + " replies";
+            foot.textContent = replies > 0 ? (path ? path + " · " + replyText : replyText) : path;
+            button.append(foot);
+        }
+        return button;
+    }
+
+    renderNoteDetail(filters, list) {
+        const note = this.notes.find((item) => item.id === this.noteId);
+        if (!note) {
+            this.noteId = null;
+            this.renderNotes();
+            return;
+        }
+        filters.replaceChildren();
+        const back = document.createElement("button");
+        back.type = "button";
+        back.className = "note-back";
+        back.dataset.noteBack = "1";
+        back.textContent = "All notes";
+        filters.append(back);
+        list.replaceChildren();
+        const top = document.createElement("div");
+        top.className = "note-top";
+        const dot = document.createElement("span");
+        dot.className = "note-dot";
+        dot.dataset.status = note.status || "pending";
+        const label = document.createElement("span");
+        label.className = "note-label";
+        label.dataset.status = note.status || "pending";
+        label.textContent = NOTE_LABELS[note.status] || "Pending";
+        const time = document.createElement("span");
+        time.className = "note-time";
+        time.textContent = timeAgo(note.createdAt);
+        top.append(dot, label, time);
+        const comment = document.createElement("p");
+        comment.className = "note-comment";
+        comment.textContent = notePreview(note.text) || "No comment";
+        list.append(top, comment);
+        (note.elements || []).forEach((element, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "note-loc";
+            button.dataset.noteElement = String(index);
+            button.dataset.status = note.status || "pending";
+            const tag = element.tag || element.tagName || "";
+            const where = element.location || [tag, element.selector || ""].filter(Boolean).join(" ");
+            button.textContent = where || "element";
+            list.append(button);
+        });
+        for (const reply of note.replies || []) {
+            const block = document.createElement("div");
+            block.className = "note-reply";
+            block.textContent = reply.text || "";
+            const when = document.createElement("span");
+            when.textContent = timeAgo(reply.at);
+            block.append(when);
+            list.append(block);
+        }
+    }
+
+    reanchorNotes() {
+        if (this.tool !== "notes" || this.panelDragged || !this.shadowRoot) {
+            return;
+        }
+        const panel = this.shadowRoot.querySelector('.panel[data-panel="notes"]');
+        if (panel && panel.classList.contains("open")) {
+            this.anchor();
+        }
+    }
+
+    toggleNoteFilter(status) {
+        if (!NOTE_STATUSES.includes(status)) {
+            return;
+        }
+        const index = this.noteFilter.indexOf(status);
+        if (index === -1) {
+            this.noteFilter.push(status);
+        } else {
+            this.noteFilter.splice(index, 1);
+        }
+        this.renderNotes();
+    }
+
+    chooseNote(id) {
+        const note = this.notes.find((item) => item.id === id);
+        if (!note) {
+            return;
+        }
+        if (note.url && !samePage(note.url)) {
+            try {
+                sessionStorage.setItem("doska.jump", id);
+            } catch {
+                // The next page opens the list without a selected note.
+            }
+            location.href = note.url;
+            return;
+        }
+        this.noteId = note.id;
+        this.renderNotes();
+        this.jumpToElement(note, 0);
+    }
+
+    jumpToElement(note, index) {
+        const element = (note.elements || [])[index];
+        if (!element) {
+            return;
+        }
+        let el = null;
+        if (element.selector) {
+            try {
+                el = document.querySelector(element.selector);
+            } catch {
+                el = null;
+            }
+        }
+        if (!el && element.location && window.CSS && typeof CSS.escape === "function") {
+            try {
+                el = document.querySelector('[data-doska-loc="' + CSS.escape(element.location) + '"]');
+            } catch {
+                el = null;
+            }
+        }
+        if (!el || !el.isConnected) {
+            return;
+        }
+        this.pinnedIssue = { el };
+        el.scrollIntoView({ block: "center", inline: "nearest" });
+        this.paintPin();
     }
 }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-16
+
+- Notes panel lists every stored note, newest first, and filters by pending, acknowledged, resolved, and dismissed. A note on this page scrolls to its element. A note on another page opens that page. The clipboard icon opens the panel.
+
 ## 2026-10-15
 
 - 0.1.0. Dev-only Symfony toolbar. Point at an element, write a note, and copy a prompt with the controller, Twig file and line, and UX component.

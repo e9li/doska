@@ -51,6 +51,16 @@ final class NoteStore
     }
 
     /**
+     * Every note, oldest first. The toolbar reverses this for its list.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function all(): array
+    {
+        return $this->read();
+    }
+
+    /**
      * Open notes, oldest first. Resolved and dismissed notes stay in the file.
      *
      * @return list<array<string, mixed>>
