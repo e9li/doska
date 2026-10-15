@@ -61,6 +61,25 @@ final class NoteStore
     }
 
     /**
+     * Remove one note of any status. A missing id fails.
+     */
+    public function delete(string $id): void
+    {
+        $this->withLock(function (array $notes) use ($id): array {
+            foreach ($notes as $index => $note) {
+                if (($note['id'] ?? '') !== $id) {
+                    continue;
+                }
+                array_splice($notes, $index, 1);
+
+                return [$notes, null];
+            }
+
+            throw new NoteException('Note not found: '.$id);
+        }, true);
+    }
+
+    /**
      * Open notes, oldest first. Resolved and dismissed notes stay in the file.
      *
      * @return list<array<string, mixed>>

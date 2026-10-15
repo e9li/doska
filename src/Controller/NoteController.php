@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Doska\Controller;
 
 use Doska\Http\Loopback;
+use Doska\Notes\NoteException;
 use Doska\Notes\NotePayload;
 use Doska\Notes\NoteStore;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The toolbar posts a note here and reads the list back. It does not speak MCP.
@@ -28,6 +30,21 @@ final class NoteController
         }
 
         return new JsonResponse(['notes' => $this->notes->all()]);
+    }
+
+    public function delete(Request $request, string $id): Response
+    {
+        if (!Loopback::allows($request, $this->allowRemoteAccess)) {
+            return new JsonResponse(['error' => 'Doska answers only on loopback.'], 403);
+        }
+
+        try {
+            $this->notes->delete($id);
+        } catch (NoteException $exception) {
+            return new JsonResponse(['error' => $exception->getMessage()], 404);
+        }
+
+        return new Response('', Response::HTTP_NO_CONTENT);
     }
 
     public function create(Request $request): JsonResponse

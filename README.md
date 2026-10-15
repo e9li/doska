@@ -34,7 +34,7 @@ php bin/console cache:clear
 
 Open a page on the local debug server. The toolbar sits on the bottom edge, above the Symfony web debug toolbar. Its styles are inside a shadow root, so the host application's CSS does not change it.
 
-- Inspect points at an element and pins it in the prompt. Drag the grip to move the prompt. Copy prompt puts the Symfony-aware prompt on the clipboard. Send stores that same note for a connected agent.
+- Inspect points at an element and pins it in the prompt. Drag the grip to move the prompt. Copy prompt puts the Symfony-aware prompt on the clipboard. Add stores that same note for a connected agent. Delete on an open note removes it.
 - Notes lists every stored note, newest first. Filter by status, open a note to read its thread, and click it to scroll to the element. A note from another page opens that page.
 - Accessibility scans the page for missing names, labels, alt text, heading order, duplicate ids, and low contrast.
 - The gear sets the toolbar edge: top, right, bottom, or left. That choice is saved in the browser.
@@ -77,7 +77,7 @@ A tag built only from `{{ }}` has no `data-doska-loc`. The prompt then uses the 
 
 ## Connect your agent
 
-Send stores the note in `var/doska/notes.json`. Copy prompt still puts the XML on the clipboard, for an agent that is not connected. A connected agent lists the note itself, opens the Twig file and line, and reports back when the change is done.
+Add stores the note in `var/doska/notes.json`. Copy prompt still puts the XML on the clipboard, for an agent that is not connected. A connected agent lists the note itself, opens the Twig file and line, and reports back when the change is done. Delete removes a note from that file.
 
 The endpoint is `POST /_doska/mcp`. It speaks stateless JSON-RPC (`initialize`, `tools/list`, `tools/call`) and answers with `application/json`. It does not issue a session id and it does not stream events. The route exists only while `kernel.debug` is true, and only for loopback unless `allow_remote_access` is on.
 

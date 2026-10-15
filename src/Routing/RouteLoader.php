@@ -46,6 +46,11 @@ final class RouteLoader
             '_stateless' => true,
         ], methods: ['GET', 'HEAD']));
 
+        $routes->add('_doska_notes_delete', new Route('/_doska/notes/{id}', [
+            '_controller' => NoteController::class.'::delete',
+            '_stateless' => true,
+        ], ['id' => '[a-f0-9]{16}'], methods: ['DELETE']));
+
         $routes->add('_doska_mcp', new Route('/_doska/mcp', [
             '_controller' => McpController::class.'::__invoke',
             '_stateless' => true,

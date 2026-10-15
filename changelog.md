@@ -3,6 +3,7 @@
 ## 2026-10-16
 
 - Notes panel lists every stored note, newest first, and filters by pending, acknowledged, resolved, and dismissed. A note on this page scrolls to its element. A note on another page opens that page. The clipboard icon opens the panel.
+- The prompt button is Add. It stores the note. Delete on an open note removes it after a confirmation. Copy prompt is unchanged.
 
 ## 2026-10-15
 

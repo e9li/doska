@@ -730,6 +730,8 @@ class DoskaToolbar extends HTMLElement {
         this.notes = [];
         this.noteFilter = [];
         this.noteId = null;
+        this.noteDeleteConfirm = false;
+        this.noteDeleting = false;
         this.notesTimer = null;
         this.notesRequest = 0;
         this.notesJson = "";
@@ -1081,6 +1083,14 @@ class DoskaToolbar extends HTMLElement {
   .note-reply span { display: block; margin-top: 4px; color: #a1a1aa; font-size: 12px; }
   .note-card, .note-loc, .note-reply, .note-comment { overflow-wrap: anywhere; min-width: 0; }
   .note-comment { margin: 0; white-space: pre-wrap; }
+  .note-actions { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+  .note-delete, .note-cancel { cursor: pointer; padding: 6px 8px; }
+  .note-delete { color: #fca5a5; }
+  .note-delete:hover { color: #fecaca; }
+  .note-delete:disabled { opacity: 0.6; cursor: default; }
+  .note-cancel { color: #e4e4e7; }
+  .note-cancel:hover { color: #fff; }
+  .note-confirm { color: #a1a1aa; font-size: 12px; }
 </style>
 <div class="panel" data-panel="composer">
   <div class="wrap">
@@ -1091,7 +1101,7 @@ class DoskaToolbar extends HTMLElement {
     <button type="button" class="grip" data-grip aria-label="Drag prompt">${ICON_GRIP}</button>
     <span class="spacer"></span>
     <button type="button" class="discard" data-discard>Discard</button>
-    <button type="button" class="send" data-send><span data-send-label>Send</span></button>
+    <button type="button" class="send" data-send><span data-send-label>Add</span></button>
     <button type="button" class="copy" data-copy>${ICON_COPY}<span data-copy-label>Copy prompt</span></button>
   </div>
 </div>
@@ -1115,6 +1125,7 @@ class DoskaToolbar extends HTMLElement {
   <div class="notes" data-notes></div>
   <div class="footer">
     <button type="button" class="grip" data-grip aria-label="Drag notes panel">${ICON_GRIP}</button>
+    <span class="note-actions" data-note-actions></span>
   </div>
 </div>
 <div class="panel" data-panel="settings">
@@ -1327,12 +1338,21 @@ class DoskaToolbar extends HTMLElement {
             this.setDock(button.dataset.dock);
         } else if (button.dataset.issue !== undefined) {
             this.showIssue(Number(button.dataset.issue));
+        } else if (button.hasAttribute("data-note-delete-confirm")) {
+            this.deleteNote();
+        } else if (button.hasAttribute("data-note-delete-cancel")) {
+            this.noteDeleteConfirm = false;
+            this.renderNotes();
+        } else if (button.hasAttribute("data-note-delete")) {
+            this.noteDeleteConfirm = true;
+            this.renderNotes();
         } else if (button.dataset.noteFilter) {
             this.toggleNoteFilter(button.dataset.noteFilter);
         } else if (button.dataset.noteId) {
             this.chooseNote(button.dataset.noteId);
         } else if (button.dataset.noteBack) {
             this.noteId = null;
+            this.noteDeleteConfirm = false;
             this.pinnedIssue = null;
             this.hideOverlay();
             this.renderNotes();
@@ -1383,6 +1403,7 @@ class DoskaToolbar extends HTMLElement {
             event.preventDefault();
             if (this.tool === "notes" && this.noteId) {
                 this.noteId = null;
+                this.noteDeleteConfirm = false;
                 this.pinnedIssue = null;
                 this.hideOverlay();
                 this.renderNotes();
@@ -1494,14 +1515,14 @@ class DoskaToolbar extends HTMLElement {
             this.copyLabel.textContent = "Copy prompt";
         }
         if (this.sendLabel) {
-            this.sendLabel.textContent = "Send";
+            this.sendLabel.textContent = "Add";
         }
         this.setTool(null);
     }
 
     noteChanged() {
-        if (this.sendLabel && this.sendLabel.textContent === "Sent") {
-            this.sendLabel.textContent = "Send";
+        if (this.sendLabel && this.sendLabel.textContent === "Added") {
+            this.sendLabel.textContent = "Add";
         }
     }
 
@@ -1541,7 +1562,7 @@ class DoskaToolbar extends HTMLElement {
             return;
         }
         this.sending = true;
-        this.sendLabel.textContent = "Sending";
+        this.sendLabel.textContent = "Adding";
         try {
             const response = await fetch(this.config.notes || "/_doska/notes", {
                 method: "POST",
@@ -1551,16 +1572,16 @@ class DoskaToolbar extends HTMLElement {
                 },
                 body: JSON.stringify(noteBody(this.config, content)),
             });
-            this.sendLabel.textContent = response.ok ? "Sent" : "Send failed";
+            this.sendLabel.textContent = response.ok ? "Added" : "Add failed";
         } catch {
-            this.sendLabel.textContent = "Send failed";
+            this.sendLabel.textContent = "Add failed";
         } finally {
             this.sending = false;
         }
-        if (this.sendLabel.textContent === "Send failed") {
+        if (this.sendLabel.textContent === "Add failed") {
             window.setTimeout(() => {
-                if (this.sendLabel.textContent === "Send failed") {
-                    this.sendLabel.textContent = "Send";
+                if (this.sendLabel.textContent === "Add failed") {
+                    this.sendLabel.textContent = "Add";
                 }
             }, 1600);
         }
@@ -1738,9 +1759,11 @@ class DoskaToolbar extends HTMLElement {
         }
         if (this.noteId) {
             this.renderNoteDetail(filters, list);
+            this.paintNoteActions();
             this.reanchorNotes();
             return;
         }
+        this.noteDeleteConfirm = false;
         filters.replaceChildren();
         for (const status of NOTE_STATUSES) {
             const count = this.notes.filter((note) => note.status === status).length;
@@ -1775,6 +1798,7 @@ class DoskaToolbar extends HTMLElement {
                 list.append(this.noteCard(note));
             }
         }
+        this.paintNoteActions();
         this.reanchorNotes();
     }
 
@@ -1823,6 +1847,7 @@ class DoskaToolbar extends HTMLElement {
         const note = this.notes.find((item) => item.id === this.noteId);
         if (!note) {
             this.noteId = null;
+            this.noteDeleteConfirm = false;
             this.renderNotes();
             return;
         }
@@ -1911,8 +1936,83 @@ class DoskaToolbar extends HTMLElement {
             return;
         }
         this.noteId = note.id;
+        this.noteDeleteConfirm = false;
         this.renderNotes();
         this.jumpToElement(note, 0);
+    }
+
+    paintNoteActions() {
+        const actions = this.shadowRoot.querySelector("[data-note-actions]");
+        if (!actions) {
+            return;
+        }
+        actions.replaceChildren();
+        if (!this.noteId) {
+            return;
+        }
+        if (this.noteDeleteConfirm) {
+            const ask = document.createElement("span");
+            ask.className = "note-confirm";
+            ask.textContent = "Delete this note?";
+            const yes = document.createElement("button");
+            yes.type = "button";
+            yes.className = "note-delete";
+            yes.setAttribute("data-note-delete-confirm", "");
+            yes.textContent = this.noteDeleting ? "Deleting" : "Delete";
+            yes.disabled = this.noteDeleting;
+            const no = document.createElement("button");
+            no.type = "button";
+            no.className = "note-cancel";
+            no.setAttribute("data-note-delete-cancel", "");
+            no.textContent = "Cancel";
+            actions.append(ask, yes, no);
+            return;
+        }
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "note-delete";
+        button.setAttribute("data-note-delete", "");
+        button.textContent = "Delete";
+        actions.append(button);
+    }
+
+    async deleteNote() {
+        if (!this.noteId || this.noteDeleting) {
+            return;
+        }
+        const id = this.noteId;
+        this.noteDeleting = true;
+        this.notesRequest += 1;
+        this.paintNoteActions();
+        const url = ((this.config && this.config.notes) || "/_doska/notes") + "/" + id;
+        let ok = false;
+        try {
+            const response = await fetch(url, { method: "DELETE", headers: { Accept: "application/json" } });
+            ok = response.ok;
+        } catch {
+            ok = false;
+        }
+        this.notesRequest += 1;
+        this.noteDeleting = false;
+        if (!ok) {
+            this.noteDeleteConfirm = false;
+            this.renderNotes();
+            const actions = this.shadowRoot.querySelector("[data-note-actions]");
+            if (actions && this.noteId === id) {
+                const message = document.createElement("span");
+                message.className = "note-confirm";
+                message.textContent = "Could not delete.";
+                actions.replaceChildren(message);
+            }
+            return;
+        }
+        this.notes = this.notes.filter((note) => note.id !== id);
+        this.notesJson = (this.notesError ? "error:" : "ok:") + JSON.stringify(this.notes);
+        this.noteId = null;
+        this.noteDeleteConfirm = false;
+        this.pinnedIssue = null;
+        this.hideOverlay();
+        this.renderNotes();
     }
 
     jumpToElement(note, index) {

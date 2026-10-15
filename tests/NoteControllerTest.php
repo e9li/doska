@@ -96,6 +96,36 @@ final class NoteControllerTest extends TestCase
         self::assertSame(200, $this->controller(true)->index($request)->getStatusCode());
     }
 
+    public function testDeleteRemovesTheNote(): void
+    {
+        $created = $this->controller()->create($this->request(['text' => 'Remove me']));
+        $id = json_decode((string) $created->getContent(), true, 8, JSON_THROW_ON_ERROR)['id'];
+
+        $response = $this->controller()->delete($this->deleteRequest($id), $id);
+
+        self::assertSame(204, $response->getStatusCode());
+        $list = $this->controller()->index(Request::create('/_doska/notes', 'GET', server: ['REMOTE_ADDR' => '127.0.0.1']));
+        $notes = json_decode((string) $list->getContent(), true, 8, JSON_THROW_ON_ERROR)['notes'];
+        self::assertSame([], $notes);
+    }
+
+    public function testDeleteOfAMissingNoteIsNotFound(): void
+    {
+        $id = '0123456789abcdef';
+        $response = $this->controller()->delete($this->deleteRequest($id), $id);
+
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    public function testARemoteDeleteIsRefused(): void
+    {
+        $id = '0123456789abcdef';
+        $request = $this->deleteRequest($id, '203.0.113.8');
+
+        self::assertSame(403, $this->controller()->delete($request, $id)->getStatusCode());
+        self::assertSame(404, $this->controller(true)->delete($request, $id)->getStatusCode());
+    }
+
     public function testAnEmptyNoteIsRejected(): void
     {
         $response = $this->controller()->create($this->request(['text' => '   ', 'elements' => []]));
@@ -134,6 +164,11 @@ final class NoteControllerTest extends TestCase
     /**
      * @param array<string, mixed> $body
      */
+    private function deleteRequest(string $id, string $address = '127.0.0.1'): Request
+    {
+        return Request::create('/_doska/notes/'.$id, 'DELETE', server: ['REMOTE_ADDR' => $address]);
+    }
+
     private function request(array $body, string $address = '127.0.0.1'): Request
     {
         return Request::create(

@@ -103,6 +103,21 @@ final class NoteStoreTest extends TestCase
         self::assertCount(1, $this->store->pending());
     }
 
+    public function testDeleteRemovesANoteOfAnyStatus(): void
+    {
+        $open = $this->store->add($this->payload('keep'));
+        $gone = $this->store->add($this->payload('remove'));
+        $this->store->acknowledge($gone['id']);
+        $this->store->resolve($gone['id'], 'Done.');
+
+        $this->store->delete($gone['id']);
+
+        self::assertSame([$open['id']], array_column($this->store->all(), 'id'));
+        $this->expectException(NoteException::class);
+        $this->expectExceptionMessage('Note not found');
+        $this->store->delete($gone['id']);
+    }
+
     public function testAcknowledgeIsOnlyValidOnce(): void
     {
         $note = $this->store->add($this->payload('once'));

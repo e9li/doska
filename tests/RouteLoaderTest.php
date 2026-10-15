@@ -25,6 +25,12 @@ final class RouteLoaderTest extends TestCase
         self::assertSame('/_doska/notes', $list->getPath());
         self::assertSame(['GET', 'HEAD'], $list->getMethods());
         self::assertTrue($list->getDefault('_stateless'));
+        $delete = $routes->get('_doska_notes_delete');
+        self::assertNotNull($delete);
+        self::assertSame('/_doska/notes/{id}', $delete->getPath());
+        self::assertSame(['DELETE'], $delete->getMethods());
+        self::assertSame('[a-f0-9]{16}', $delete->getRequirement('id'));
+        self::assertTrue($delete->getDefault('_stateless'));
         self::assertSame('/_doska/mcp', $mcp->getPath());
         self::assertContains('POST', $mcp->getMethods());
         self::assertTrue($mcp->getDefault('_stateless'));

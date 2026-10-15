@@ -1,11 +1,11 @@
 ---
 name: fix-notes
-description: Work through notes a person sent from the Doska toolbar on a running Symfony app. List them with the doska MCP tools, open the Twig file and line on each pinned element, edit, and resolve. Use when the user says "check Doska", "fix the notes", "pending notes", or wants the agent to pick up a note from the page.
+description: Work through notes a person added from the Doska toolbar on a running Symfony app. List them with the doska MCP tools, open the Twig file and line on each pinned element, edit, and resolve. Use when the user says "check Doska", "fix the notes", "pending notes", or wants the agent to pick up a note from the page.
 ---
 
 # Fix Doska notes
 
-Doska is a dev-only toolbar on the Symfony app. Send stores a note. The MCP tools are how an agent reads it. Copy prompt is a separate clipboard path and is not this loop.
+Doska is a dev-only toolbar on the Symfony app. Add stores a note. The MCP tools are how an agent reads it. Copy prompt is a separate clipboard path and is not this loop. Delete removes a note from the toolbar and does not resolve it.
 
 The tools are `doska_get_pending`, `doska_get_note`, `doska_acknowledge`, `doska_resolve`, `doska_dismiss`, and `doska_reply`.
 
