@@ -11,3 +11,5 @@
 - The gear docks the bar to the top, right, bottom, or left. The choice is saved in the browser. `dock` in the bundle config is the default, and `position` is the pixel inset.
 - The toolbar is injected only when `kernel.debug` is true. Routes stay stateless and answer on loopback unless `allow_remote_access` is turned on.
 - Renamed the package from promptbar to doska. The bundle namespace is `Doska\`, the config key is `doska`, and the routes live under `/_doska`.
+- Send stores the current note for a connected agent. `POST /_doska/mcp` exposes `doska_get_pending`, `doska_get_note`, `doska_acknowledge`, `doska_resolve`, `doska_dismiss`, and `doska_reply`. Notes live in `var/doska/notes.json`. Copy prompt is unchanged.
+- Connect instructions for Claude Code, Codex, Grok (`grok mcp add --transport http`), and Kimi Code (`url` in `~/.kimi-code/mcp.json`, HTTP with no `transport`). The same steps are in `skills/fix-notes/SKILL.md`.

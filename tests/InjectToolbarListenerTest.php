@@ -26,6 +26,7 @@ final class InjectToolbarListenerTest extends TestCase
         self::assertStringContainsString('Doska\\Tests\\Fixture\\SampleController::index route:sample', $content);
         self::assertStringContainsString('<!-- </controller> -->', $content);
         self::assertStringContainsString('&quot;route&quot;:&quot;sample&quot;', $content);
+        self::assertStringContainsString('&quot;notes&quot;:&quot;/_doska/notes&quot;', $content);
         self::assertGreaterThan(
             strpos($content, '<!-- </controller> -->'),
             strpos($content, 'id="doska-toolbar"'),
@@ -104,11 +105,11 @@ final class InjectToolbarListenerTest extends TestCase
     {
         $urls = $this->createStub(UrlGeneratorInterface::class);
         $urls->method('generate')->willReturnCallback(static function (string $name): string {
-            if ('_doska_toolbar' !== $name) {
-                throw new RouteNotFoundException($name);
-            }
-
-            return '/_doska/toolbar.js';
+            return match ($name) {
+                '_doska_toolbar' => '/_doska/toolbar.js',
+                '_doska_notes' => '/_doska/notes',
+                default => throw new RouteNotFoundException($name),
+            };
         });
 
         $listener = new InjectToolbarListener(

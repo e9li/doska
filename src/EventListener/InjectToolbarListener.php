@@ -155,6 +155,7 @@ final class InjectToolbarListener
 
         try {
             $scriptUrl = $this->urlGenerator->generate('_doska_toolbar');
+            $notesUrl = $this->urlGenerator->generate('_doska_notes');
         } catch (RouteNotFoundException) {
             return $content;
         }
@@ -167,6 +168,7 @@ final class InjectToolbarListener
             'root' => $this->projectDir,
             'dock' => $this->dock,
             'position' => $this->position,
+            'notes' => $notesUrl,
         ];
         $configAttr = htmlspecialchars(
             json_encode($config, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),

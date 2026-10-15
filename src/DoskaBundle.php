@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Doska;
 
+use Doska\Controller\McpController;
+use Doska\Controller\NoteController;
 use Doska\Controller\ToolbarController;
 use Doska\EventListener\InjectToolbarListener;
+use Doska\Mcp\ToolRunner;
+use Doska\Notes\NoteStore;
 use Doska\Routing\RouteLoader;
 use Doska\Twig\SourceMapExtension;
 use Doska\Twig\SourceMapRuntime;
@@ -91,6 +95,26 @@ final class DoskaBundle extends AbstractBundle
         $container->services()
             ->set(ToolbarController::class)
                 ->arg('$projectDir', $projectDir)
+                ->tag('controller.service_arguments');
+
+        $container->services()
+            ->set(NoteStore::class)
+                ->arg('$projectDir', $projectDir);
+
+        $container->services()
+            ->set(ToolRunner::class)
+                ->arg('$notes', new Reference(NoteStore::class));
+
+        $container->services()
+            ->set(NoteController::class)
+                ->arg('$notes', new Reference(NoteStore::class))
+                ->arg('$allowRemoteAccess', $config['allow_remote_access'])
+                ->tag('controller.service_arguments');
+
+        $container->services()
+            ->set(McpController::class)
+                ->arg('$tools', new Reference(ToolRunner::class))
+                ->arg('$allowRemoteAccess', $config['allow_remote_access'])
                 ->tag('controller.service_arguments');
 
         $runtime = $container->services()

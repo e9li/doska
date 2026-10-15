@@ -173,11 +173,48 @@ function definitionText(stack) {
     return lines.join("\n");
 }
 
+function uxParts(el) {
+    const stimulusEl = el.closest("[data-controller]");
+    let stimulus = null;
+    if (stimulusEl) {
+        const names = (stimulusEl.getAttribute("data-controller") || "").trim();
+        const values = [];
+        const app = window.Stimulus;
+        if (app && names) {
+            const identifier = names.split(/\s+/)[0];
+            const controller = app.getControllerForElementAndIdentifier?.(stimulusEl, identifier);
+            if (controller?.constructor?.values) {
+                values.push(...Object.keys(controller.constructor.values));
+            }
+        }
+        stimulus = {
+            controllers: names,
+            element: stimulusEl.tagName.toLowerCase() + (stimulusEl.id ? "#" + stimulusEl.id : ""),
+            values,
+        };
+    }
+
+    const liveEl = el.closest("[data-live-name-value]");
+    let live = null;
+    if (liveEl) {
+        const props = liveEl.getAttribute("data-live-props-value");
+        live = {
+            name: liveEl.getAttribute("data-live-name-value") || "",
+            props: props && props.length <= 500 ? props : null,
+        };
+    }
+
+    const frame = el.closest("turbo-frame");
+    const turbo = frame ? { id: frame.id || null, src: frame.getAttribute("src") } : null;
+    return { stimulus, live, turbo };
+}
+
 function elementInfo(el) {
     const source = resolveSource(el);
     const text = (el.innerText || "").replace(/\s+/g, " ").trim().slice(0, 200);
     const selected = window.getSelection();
     const selectedText = selected && el.contains(selected.anchorNode) ? selected.toString().trim() : "";
+    const parts = uxParts(el);
     return {
         tagName: el.tagName.toLowerCase(),
         selector: cssPath(el),
@@ -187,6 +224,9 @@ function elementInfo(el) {
         line: source.line,
         stack: source.stack,
         ux: uxDetails(el),
+        stimulus: parts.stimulus,
+        live: parts.live,
+        turbo: parts.turbo,
     };
 }
 
@@ -260,6 +300,29 @@ function buildPrompt(config, chips, userText) {
         references.join("\n"),
         "</references>",
     ].join("\n");
+}
+
+function noteBody(config, content) {
+    return {
+        text: content.text,
+        url: location.href,
+        controller: config.controller || null,
+        source: config.source || null,
+        route: config.route || null,
+        elements: content.chips.map((info) => ({
+            tag: info.tagName,
+            selector: info.selector,
+            location: info.file ? info.file + ":" + info.line : null,
+            file: info.file,
+            line: info.line,
+            stack: info.stack,
+            text: info.textContent,
+            selectedText: info.selectedText || "",
+            stimulus: info.stimulus || null,
+            live: info.live || null,
+            turbo: info.turbo || null,
+        })),
+    };
 }
 
 function readConfig(host) {
@@ -615,6 +678,7 @@ class DoskaToolbar extends HTMLElement {
         this.pinnedIssue = null;
         this.drag = null;
         this.issues = [];
+        this.sending = false;
         this.onMove = null;
         this.onClick = null;
         this.onKey = null;
@@ -658,13 +722,17 @@ class DoskaToolbar extends HTMLElement {
         this.editor = shadow.querySelector("[data-editor]");
         this.placeholder = shadow.querySelector("[data-placeholder]");
         this.copyLabel = shadow.querySelector("[data-copy-label]");
+        this.sendLabel = shadow.querySelector("[data-send-label]");
         this.findingsLabel = shadow.querySelector("[data-findings-label]");
         shadow.addEventListener("click", (event) => this.onShadowClick(event));
         shadow.addEventListener("pointerdown", (event) => this.gripDown(event));
         shadow.addEventListener("pointermove", (event) => this.gripMove(event));
         shadow.addEventListener("pointerup", (event) => this.gripUp(event));
         shadow.addEventListener("pointercancel", (event) => this.gripUp(event));
-        this.editor.addEventListener("input", () => this.syncPlaceholder());
+        this.editor.addEventListener("input", () => {
+            this.syncPlaceholder();
+            this.noteChanged();
+        });
     }
 
     attachPageListeners() {
@@ -816,6 +884,17 @@ class DoskaToolbar extends HTMLElement {
   }
   .copy { background: #3b82f6; color: #fff; font-weight: 500; }
   .copy:hover { background: #2563eb; }
+  .send {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    color: #e4e4e7;
+    border: 1px solid #3f3f46;
+    font-weight: 500;
+  }
+  .send:hover { background: #2a2a30; }
   .findings { background: transparent; color: #e4e4e7; border: 1px solid #3f3f46; }
   .findings:hover { background: #2a2a30; }
   .chip {
@@ -885,6 +964,7 @@ class DoskaToolbar extends HTMLElement {
     <button type="button" class="grip" data-grip aria-label="Drag prompt">${ICON_GRIP}</button>
     <span class="spacer"></span>
     <button type="button" class="discard" data-discard>Discard</button>
+    <button type="button" class="send" data-send><span data-send-label>Send</span></button>
     <button type="button" class="copy" data-copy>${ICON_COPY}<span data-copy-label>Copy prompt</span></button>
   </div>
 </div>
@@ -1094,6 +1174,8 @@ class DoskaToolbar extends HTMLElement {
             this.setTool(button.dataset.tool);
         } else if (button.hasAttribute("data-discard")) {
             this.discard();
+        } else if (button.hasAttribute("data-send")) {
+            this.send();
         } else if (button.hasAttribute("data-copy")) {
             this.copy();
         } else if (button.hasAttribute("data-findings")) {
@@ -1227,10 +1309,12 @@ class DoskaToolbar extends HTMLElement {
             event.stopPropagation();
             chip.remove();
             this.syncPlaceholder();
+            this.noteChanged();
         });
         this.chips.push(info);
         this.editor.append(chip, document.createTextNode(" "));
         this.syncPlaceholder();
+        this.noteChanged();
     }
 
     syncPlaceholder() {
@@ -1245,7 +1329,16 @@ class DoskaToolbar extends HTMLElement {
         if (this.copyLabel) {
             this.copyLabel.textContent = "Copy prompt";
         }
+        if (this.sendLabel) {
+            this.sendLabel.textContent = "Send";
+        }
         this.setTool(null);
+    }
+
+    noteChanged() {
+        if (this.sendLabel && this.sendLabel.textContent === "Sent") {
+            this.sendLabel.textContent = "Send";
+        }
     }
 
     editorContent() {
@@ -1272,6 +1365,40 @@ class DoskaToolbar extends HTMLElement {
             area.select();
             document.execCommand("copy");
             area.remove();
+        }
+    }
+
+    async send() {
+        if (this.sending) {
+            return;
+        }
+        const content = this.editorContent();
+        if (content.text.trim() === "" && content.chips.length === 0) {
+            return;
+        }
+        this.sending = true;
+        this.sendLabel.textContent = "Sending";
+        try {
+            const response = await fetch(this.config.notes || "/_doska/notes", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify(noteBody(this.config, content)),
+            });
+            this.sendLabel.textContent = response.ok ? "Sent" : "Send failed";
+        } catch {
+            this.sendLabel.textContent = "Send failed";
+        } finally {
+            this.sending = false;
+        }
+        if (this.sendLabel.textContent === "Send failed") {
+            window.setTimeout(() => {
+                if (this.sendLabel.textContent === "Send failed") {
+                    this.sendLabel.textContent = "Send";
+                }
+            }, 1600);
         }
     }
 

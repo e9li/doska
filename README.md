@@ -34,7 +34,7 @@ php bin/console cache:clear
 
 Open a page on the local debug server. The toolbar sits on the bottom edge, above the Symfony web debug toolbar. Its styles are inside a shadow root, so the host application's CSS does not change it.
 
-- Inspect points at an element and pins it in the prompt. Drag the grip to move the prompt. Copy prompt puts the Symfony-aware prompt on the clipboard.
+- Inspect points at an element and pins it in the prompt. Drag the grip to move the prompt. Copy prompt puts the Symfony-aware prompt on the clipboard. Send stores that same note for a connected agent.
 - Accessibility scans the page for missing names, labels, alt text, heading order, duplicate ids, and low contrast.
 - The gear sets the toolbar edge: top, right, bottom, or left. That choice is saved in the browser.
 
@@ -74,6 +74,62 @@ On `.html.twig` and `.svg.twig` templates the bundle:
 
 A tag built only from `{{ }}` has no `data-doska-loc`. The prompt then uses the nearest frame.
 
-## Later
+## Connect your agent
 
-An MCP endpoint that lets an agent pull notes, the way Annotai does, is not part of this version. Copy prompt is enough for any agent that can read the clipboard.
+Send stores the note in `var/doska/notes.json`. Copy prompt still puts the XML on the clipboard, for an agent that is not connected. A connected agent lists the note itself, opens the Twig file and line, and reports back when the change is done.
+
+The endpoint is `POST /_doska/mcp`. It speaks stateless JSON-RPC (`initialize`, `tools/list`, `tools/call`) and answers with `application/json`. It does not issue a session id and it does not stream events. The route exists only while `kernel.debug` is true, and only for loopback unless `allow_remote_access` is on.
+
+The agent and the browser have to be on the machine that serves the app. Use the origin of that app in place of `https://drehscheibe.test`. Register the server, then start a new agent session so the tools load. `skills/fix-notes/SKILL.md` is the loop: list pending notes, acknowledge one, open its file and line, edit, then resolve with a one-line summary.
+
+The tools are `doska_get_pending`, `doska_get_note`, `doska_acknowledge`, `doska_resolve`, `doska_dismiss`, and `doska_reply`. Acknowledge a note before resolving it. A resolved or dismissed note cannot change again.
+
+`doska_watch_notes` is not available. Poll `doska_get_pending`. A blocking wait would hold a PHP worker.
+
+### Claude Code
+
+```bash
+claude mcp add --transport http doska https://drehscheibe.test/_doska/mcp
+```
+
+### Codex
+
+Add this to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.doska]
+url = "https://drehscheibe.test/_doska/mcp"
+```
+
+### Grok
+
+```bash
+grok mcp add --transport http doska https://drehscheibe.test/_doska/mcp
+```
+
+That writes `~/.grok/config.toml`. Pass `--scope project` to write `.grok/config.toml` in the repo instead. The same block by hand:
+
+```toml
+[mcp_servers.doska]
+url = "https://drehscheibe.test/_doska/mcp"
+```
+
+Use the HTTP transport. `grok mcp doctor doska` checks the handshake. `/mcps` lists the server in the session.
+
+### Kimi Code
+
+Kimi Code CLI reads `mcp.json`. A `url` with no `transport` is HTTP. Leave `transport` unset.
+
+User-wide, `~/.kimi-code/mcp.json` (or `$KIMI_CODE_HOME/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "doska": {
+      "url": "https://drehscheibe.test/_doska/mcp"
+    }
+  }
+}
+```
+
+For one repo, put the same file at `.kimi-code/mcp.json`. The project entry wins when both exist. A project server stays off until that workspace is trusted. In the TUI, `/mcp-config` edits the file and `/mcp` shows whether the server connected.

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Doska\Routing;
 
+use Doska\Controller\McpController;
+use Doska\Controller\NoteController;
 use Doska\Controller\ToolbarController;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
@@ -33,6 +35,16 @@ final class RouteLoader
             '_controller' => ToolbarController::class.'::config',
             '_stateless' => true,
         ], methods: ['GET', 'HEAD']));
+
+        $routes->add('_doska_notes', new Route('/_doska/notes', [
+            '_controller' => NoteController::class.'::create',
+            '_stateless' => true,
+        ], methods: ['POST']));
+
+        $routes->add('_doska_mcp', new Route('/_doska/mcp', [
+            '_controller' => McpController::class.'::__invoke',
+            '_stateless' => true,
+        ], methods: ['GET', 'POST', 'DELETE']));
 
         return $routes;
     }
