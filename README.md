@@ -2,9 +2,22 @@
 
 Dev-only Symfony toolbar. Point at an element, write a note, and copy a prompt that names the controller, the Twig file and line, and the Symfony UX component.
 
-The prompt uses the same XML shape as the [Tidewave toolbar](https://tidewave.ai/toolbar). The source walk follows [Annotai](https://github.com/andrielfn/annotai): HTML comments are a stack of frames, and `data-doska-loc` on the element is the line. There is no account and no desktop app. The script is served by the app.
+Inspired by the [Tidewave toolbar](https://tidewave.ai/toolbar) and [Annotai](https://github.com/andrielfn/annotai). The copied prompt is a short XML note an agent can read. HTML comments carry a stack of template frames, and `data-doska-loc` on the element is the line. There is no account and no desktop app. The script is served by the app.
 
 The bundle does nothing unless `kernel.debug` is true. Register it for the `dev` and `test` environments only.
+
+## About
+
+Doska is a one-person project by [Rafael Egli](https://www.e9li.com), e9li GmbH, Switzerland.
+
+This library is developed at [git.e9li.com](https://git.e9li.com/e9li/doska) and mirrored to [GitHub](https://github.com/e9li/doska). The Git server is the canonical source. The GitHub repository is the public mirror.
+
+## Issues & Feedback
+
+If you found a bug or have a suggestion, you can either:
+
+- Open an issue on [GitHub](https://github.com/e9li/doska/issues)
+- Send an email to rafael@e9li.com
 
 ## Install
 
@@ -81,7 +94,7 @@ Add stores the note in `var/doska/notes.json`. Copy prompt still puts the XML on
 
 The endpoint is `POST /_doska/mcp`. It speaks stateless JSON-RPC (`initialize`, `tools/list`, `tools/call`) and answers with `application/json`. It does not issue a session id and it does not stream events. The route exists only while `kernel.debug` is true, and only for loopback unless `allow_remote_access` is on.
 
-The agent and the browser have to be on the machine that serves the app. Use the origin of that app in place of `https://drehscheibe.test`. Register the server, then start a new agent session so the tools load. `skills/fix-notes/SKILL.md` is the loop: list pending notes, acknowledge one, open its file and line, edit, then resolve with a one-line summary.
+The agent and the browser have to be on the machine that serves the app. Use the origin of that app in place of `https://app.test`. Register the server, then start a new agent session so the tools load. `skills/fix-notes/SKILL.md` is the loop: list pending notes, acknowledge one, open its file and line, edit, then resolve with a one-line summary.
 
 The tools are `doska_get_pending`, `doska_get_note`, `doska_acknowledge`, `doska_resolve`, `doska_dismiss`, and `doska_reply`. Acknowledge a note before resolving it. A resolved or dismissed note cannot change again.
 
@@ -90,7 +103,7 @@ The tools are `doska_get_pending`, `doska_get_note`, `doska_acknowledge`, `doska
 ### Claude Code
 
 ```bash
-claude mcp add --transport http doska https://drehscheibe.test/_doska/mcp
+claude mcp add --transport http doska https://app.test/_doska/mcp
 ```
 
 ### Codex
@@ -99,20 +112,20 @@ Add this to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.doska]
-url = "https://drehscheibe.test/_doska/mcp"
+url = "https://app.test/_doska/mcp"
 ```
 
 ### Grok
 
 ```bash
-grok mcp add --transport http doska https://drehscheibe.test/_doska/mcp
+grok mcp add --transport http doska https://app.test/_doska/mcp
 ```
 
 That writes `~/.grok/config.toml`. Pass `--scope project` to write `.grok/config.toml` in the repo instead. The same block by hand:
 
 ```toml
 [mcp_servers.doska]
-url = "https://drehscheibe.test/_doska/mcp"
+url = "https://app.test/_doska/mcp"
 ```
 
 Use the HTTP transport. `grok mcp doctor doska` checks the handshake. `/mcps` lists the server in the session.
@@ -127,10 +140,14 @@ User-wide, `~/.kimi-code/mcp.json` (or `$KIMI_CODE_HOME/mcp.json`):
 {
   "mcpServers": {
     "doska": {
-      "url": "https://drehscheibe.test/_doska/mcp"
+      "url": "https://app.test/_doska/mcp"
     }
   }
 }
 ```
 
 For one repo, put the same file at `.kimi-code/mcp.json`. The project entry wins when both exist. A project server stays off until that workspace is trusted. In the TUI, `/mcp-config` edits the file and `/mcp` shows whether the server connected.
+
+## License
+
+[MIT](LICENSE)
