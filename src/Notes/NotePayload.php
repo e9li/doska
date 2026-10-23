@@ -19,6 +19,7 @@ final class NotePayload
      *     controller: ?string,
      *     source: ?string,
      *     route: ?string,
+     *     mode: ?string,
      *     elements: list<array<string, mixed>>
      * }
      */
@@ -40,6 +41,7 @@ final class NotePayload
             'controller' => self::nullable($body['controller'] ?? null, 500),
             'source' => self::nullable($body['source'] ?? null, 500),
             'route' => self::nullable($body['route'] ?? null, 200),
+            'mode' => self::mode($body['mode'] ?? null),
             'elements' => $elements,
         ];
     }
@@ -225,6 +227,11 @@ final class NotePayload
         }
 
         return null;
+    }
+
+    private static function mode(mixed $value): ?string
+    {
+        return $value === 'dev' || $value === 'content' ? $value : null;
     }
 
     private static function nullable(mixed $value, int $max): ?string

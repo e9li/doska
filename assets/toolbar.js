@@ -166,7 +166,9 @@ function definitionText(stack) {
         }
         seen.add(key);
         lines.push(frame.name + ": " + frame.file + ":" + frame.line);
-        if (frame.extra && !frame.extra.includes(" route:")) {
+        if (frame.extra && frame.extra.startsWith("content ")) {
+            lines.push(frame.extra);
+        } else if (frame.extra && !frame.extra.includes(" route:")) {
             lines.push(frame.name + " class: " + frame.extra);
         }
     }
@@ -230,8 +232,36 @@ function elementInfo(el) {
     };
 }
 
-function frameworkDetails(info) {
+function contentAddress(stack) {
+    let page = null;
+    for (let i = stack.length - 1; i >= 0; i -= 1) {
+        const extra = stack[i].extra || "";
+        if (!extra.startsWith("content ")) {
+            continue;
+        }
+        if (extra.includes(" block ")) {
+            return extra;
+        }
+        if (!page) {
+            page = extra;
+        }
+    }
+    return page;
+}
+
+function frameworkDetails(info, mode) {
     const parts = [];
+    if (mode === "content" || mode === "dev") {
+        const address = contentAddress(info.stack);
+        if (mode === "content") {
+            parts.push(address
+                ? "Content mode. Change the stored field. Leave the PHP alone.\n\n" + address
+                : "Content mode. This element has no content field. The text may be written in the template.");
+        } else {
+            parts.push("Dev mode. Edit the PHP template or snippet. Leave the content file alone.");
+        }
+        parts.push("");
+    }
     if (info.file) {
         parts.push("The element source is at:", "", info.file + ":" + info.line, "");
     }
@@ -249,7 +279,8 @@ function frameworkDetails(info) {
     return parts.join("\n").trim();
 }
 
-function buildPrompt(config, chips, userText) {
+function buildPrompt(config, chips, userText, mode) {
+    const kirbyMode = config.engine === "kirby" ? mode : null;
     const references = chips.map((info, index) => {
         const body = [
             "<reference id=\"" + index + "\" type=\"selected_element\">",
@@ -260,7 +291,7 @@ function buildPrompt(config, chips, userText) {
             info.selector,
             "</selector>",
             "<framework-details>",
-            frameworkDetails(info),
+            frameworkDetails(info, kirbyMode),
             "</framework-details>",
         ];
         if (info.textContent) {
@@ -284,6 +315,7 @@ function buildPrompt(config, chips, userText) {
         "controller: " + (config.controller || ""),
         "source: " + (config.source || ""),
         "route: " + (config.route || ""),
+        ...(config.engine === "kirby" && mode ? ["mode: " + mode] : []),
         "</framework-details>",
         "</context>",
     ];
@@ -302,13 +334,14 @@ function buildPrompt(config, chips, userText) {
     ].join("\n");
 }
 
-function noteBody(config, content) {
+function noteBody(config, content, mode) {
     return {
         text: content.text,
         url: location.href,
         controller: config.controller || null,
         source: config.source || null,
         route: config.route || null,
+        mode: config.engine === "kirby" ? (mode || null) : null,
         elements: content.chips.map((info) => ({
             tag: info.tagName,
             selector: info.selector,
@@ -382,6 +415,15 @@ function timeAgo(iso) {
         return hours + "h";
     }
     return Math.round(hours / 24) + "d";
+}
+
+function storedMode() {
+    try {
+        const value = localStorage.getItem("doska.mode");
+        return value === "dev" || value === "content" ? value : null;
+    } catch {
+        return null;
+    }
 }
 
 function storedDock() {
@@ -712,6 +754,8 @@ const ICON_GEAR = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="
 const ICON_NOTES = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M17 2V4H20.0066C20.5552 4 21 4.44495 21 4.9934V21.0066C21 21.5552 20.5551 22 20.0066 22H3.9934C3.44476 22 3 21.5551 3 21.0066V4.9934C3 4.44476 3.44495 4 3.9934 4H7V2H17ZM7 6H5V20H19V6H17V8H7V6ZM9 16V18H7V16H9ZM9 13V15H7V13H9ZM9 10V12H7V10H9ZM15 4H9V6H15V4Z"></path></svg>';
 const ICON_GRIP = '<svg viewBox="0 0 12 18" width="12" height="18" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.25"/><circle cx="9" cy="3" r="1.25"/><circle cx="3" cy="9" r="1.25"/><circle cx="9" cy="9" r="1.25"/><circle cx="3" cy="15" r="1.25"/><circle cx="9" cy="15" r="1.25"/></g></svg>';
 const ICON_COPY = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M12.5 3.5v5.2a2 2 0 0 1-2 2H4.5"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M6.6 8.2 4.2 10.7l2.4 2.6"/></svg>';
+const ICON_DEV = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M24 12L18.3431 17.6569L16.9289 16.2426L21.1716 12L16.9289 7.75736L18.3431 6.34315L24 12ZM2.82843 12L7.07107 16.2426L5.65685 17.6569L0 12L5.65685 6.34315L7.07107 7.75736L2.82843 12ZM9.78845 21H7.66009L14.2116 3H16.3399L9.78845 21Z"></path></svg>';
+const ICON_CONTENT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M8 8V16H16V8H8ZM6 6H18V18H6V6ZM6 2H8V5H6V2ZM6 19H8V22H6V19ZM2 6H5V8H2V6ZM2 16H5V18H2V16ZM19 6H22V8H19V6ZM19 16H22V18H19V16ZM16 2H18V5H16V2ZM16 19H18V22H16V19Z"></path></svg>';
 
 class DoskaToolbar extends HTMLElement {
     constructor() {
@@ -722,6 +766,7 @@ class DoskaToolbar extends HTMLElement {
         this.chips = [];
         this.config = {};
         this.dock = "bottom";
+        this.mode = "dev";
         this.panelPos = null;
         this.panelDragged = false;
         this.pinnedIssue = null;
@@ -747,6 +792,7 @@ class DoskaToolbar extends HTMLElement {
     connectedCallback() {
         this.config = readConfig(this);
         this.dock = resolveDock(this.config);
+        this.mode = storedMode() || "dev";
         this.panelPos = storedPanel();
         this.panelDragged = this.panelPos !== null;
         if (!this.highlight || !this.highlight.isConnected) {
@@ -761,7 +807,7 @@ class DoskaToolbar extends HTMLElement {
         const open = this.shadowRoot.querySelector(".panel.open");
         if (open) {
             if (this.panelDragged && this.panelPos) {
-                this.place(this.panelPos.left, this.panelPos.top);
+                this.restorePanel();
             } else {
                 this.anchor();
             }
@@ -807,6 +853,7 @@ class DoskaToolbar extends HTMLElement {
         this.editor.addEventListener("input", () => {
             this.syncPlaceholder();
             this.noteChanged();
+            this.keepCaret();
         });
     }
 
@@ -815,7 +862,10 @@ class DoskaToolbar extends HTMLElement {
         this.onMove = (event) => this.hover(event);
         this.onClick = (event) => this.pick(event);
         this.onKey = (event) => this.key(event);
-        this.onReflow = () => this.reflowPin();
+        this.onReflow = () => {
+            this.reflowPin();
+            this.limitPanel(this.shadowRoot?.querySelector(".panel.open"));
+        };
         document.addEventListener("mousemove", this.onMove, true);
         document.addEventListener("click", this.onClick, true);
         document.addEventListener("keydown", this.onKey, true);
@@ -897,6 +947,7 @@ class DoskaToolbar extends HTMLElement {
   }
   .bar.vertical { flex-direction: column; }
   .mark, .tool {
+    position: relative;
     width: 32px;
     height: 32px;
     display: grid;
@@ -906,8 +957,50 @@ class DoskaToolbar extends HTMLElement {
     color: #e7e7ea;
   }
   .tool { cursor: pointer; }
+  .tool[hidden] { display: none; }
   .tool:hover { background: #2a2a30; }
   .tool[aria-pressed="true"] { background: #34343c; color: #fff; }
+  .tool::after {
+    content: attr(data-tip);
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #0c0c0e;
+    border: 1px solid rgba(255, 255, 255, .12);
+    color: #f4f4f5;
+    font-size: 12px;
+    line-height: 1.3;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .tool:hover::after,
+  .tool:focus-visible::after {
+    opacity: 1;
+    transition-delay: .35s;
+  }
+  :host([data-dock="top"]) .tool::after {
+    top: calc(100% + 8px);
+    bottom: auto;
+  }
+  :host([data-dock="left"]) .tool::after {
+    left: calc(100% + 8px);
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
+  :host([data-dock="right"]) .tool::after {
+    left: auto;
+    right: calc(100% + 8px);
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
   .panel {
     position: absolute;
     display: none;
@@ -918,12 +1011,16 @@ class DoskaToolbar extends HTMLElement {
     box-shadow: 0 16px 40px rgba(0, 0, 0, .42);
     color: #f4f4f5;
   }
-  .panel.open { display: flex; flex-direction: column; }
+  .panel.open {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
   .panel[data-panel="composer"],
   .panel[data-panel="a11y"] { width: 420px; }
   .panel[data-panel="notes"] { width: 360px; }
   .panel[data-panel="settings"] { width: 260px; }
-  .wrap { position: relative; padding: 14px 16px 6px; }
+  .wrap { position: relative; min-height: 0; overflow: auto; padding: 14px 16px 6px; }
   .editor { min-height: 52px; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
   .placeholder {
     position: absolute;
@@ -934,7 +1031,7 @@ class DoskaToolbar extends HTMLElement {
     pointer-events: none;
     font-size: 14px;
   }
-  .footer { display: flex; align-items: center; gap: 8px; padding: 8px 10px 10px; }
+  .footer { display: flex; align-items: center; gap: 8px; flex: none; padding: 8px 10px 10px; }
   .grip {
     width: 28px;
     height: 28px;
@@ -990,13 +1087,15 @@ class DoskaToolbar extends HTMLElement {
     color: #f4f4f5;
   }
   .chip span:last-child { color: #a1a1aa; }
-  .head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0; flex-wrap: wrap; }
+  .head { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 14px 0; flex-wrap: wrap; }
   .title { font-weight: 600; }
   .count { color: #a1a1aa; font-size: 12px; }
   .issues {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 2px;
+    min-height: 0;
     max-height: 280px;
     overflow: auto;
     padding: 8px;
@@ -1049,9 +1148,11 @@ class DoskaToolbar extends HTMLElement {
   .note-dot[data-status="resolved"] { background: #22c55e; }
   .notes {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 6px;
     min-width: 0;
+    min-height: 0;
     max-height: 360px;
     overflow: auto;
     padding: 8px;
@@ -1142,10 +1243,11 @@ class DoskaToolbar extends HTMLElement {
 </div>
 <div class="bar">
   <span class="mark" title="Doska">${MARK}</span>
-  <button type="button" class="tool" data-tool="inspect" title="Inspect" aria-pressed="false" aria-label="Inspect">${ICON_INSPECT}</button>
-  <button type="button" class="tool" data-tool="a11y" title="Accessibility" aria-pressed="false" aria-label="Accessibility">${ICON_A11Y}</button>
-  <button type="button" class="tool" data-tool="notes" title="Notes" aria-pressed="false" aria-label="Notes">${ICON_NOTES}</button>
-  <button type="button" class="tool" data-tool="settings" title="Position" aria-pressed="false" aria-label="Toolbar position">${ICON_GEAR}</button>
+  <button type="button" class="tool" data-tool="inspect" data-tip="Inspect" aria-pressed="false" aria-label="Inspect">${ICON_INSPECT}</button>
+  <button type="button" class="tool" data-tool="a11y" data-tip="Accessibility" aria-pressed="false" aria-label="Accessibility">${ICON_A11Y}</button>
+  <button type="button" class="tool" data-tool="notes" data-tip="Notes" aria-pressed="false" aria-label="Notes">${ICON_NOTES}</button>
+  <button type="button" class="tool" data-mode-toggle hidden data-tip="Dev" aria-label="Dev">${ICON_DEV}</button>
+  <button type="button" class="tool" data-tool="settings" data-tip="Position" aria-pressed="false" aria-label="Position">${ICON_GEAR}</button>
 </div>`;
     }
 
@@ -1180,8 +1282,44 @@ class DoskaToolbar extends HTMLElement {
             this.style.bottom = inset("bottom", 52) + "px";
             this.style.left = inset("left", 16) + "px";
         }
+        this.dataset.dock = this.dock;
         this.shadowRoot.querySelector(".bar").classList.toggle("vertical", this.dock === "left" || this.dock === "right");
         this.paintDocks();
+        this.paintModes();
+    }
+
+    paintModes() {
+        const button = this.shadowRoot?.querySelector("[data-mode-toggle]");
+        if (!button) {
+            return;
+        }
+        const kirby = this.config.engine === "kirby";
+        button.hidden = !kirby;
+        if (!kirby) {
+            return;
+        }
+        const content = this.mode === "content";
+        button.innerHTML = content ? ICON_CONTENT : ICON_DEV;
+        const label = content ? "Content" : "Dev";
+        button.dataset.tip = label;
+        button.setAttribute("aria-label", label);
+    }
+
+    setMode(mode) {
+        if (mode !== "dev" && mode !== "content") {
+            return;
+        }
+        this.mode = mode;
+        try {
+            localStorage.setItem("doska.mode", mode);
+        } catch {
+            // Private mode keeps the choice for this page only.
+        }
+        this.paintModes();
+    }
+
+    toggleMode() {
+        this.setMode(this.mode === "content" ? "dev" : "content");
     }
 
     paintDocks() {
@@ -1226,46 +1364,73 @@ class DoskaToolbar extends HTMLElement {
         }
         open.style.visibility = "hidden";
         if (this.panelDragged && this.panelPos) {
-            this.place(this.panelPos.left, this.panelPos.top);
+            this.restorePanel();
         } else {
             this.anchor();
         }
         open.style.visibility = "";
     }
 
+    growsUp() {
+        return this.dock !== "top";
+    }
+
     anchor() {
-        const bar = this.shadowRoot.querySelector(".bar").getBoundingClientRect();
+        const bar = this.shadowRoot.querySelector(".bar");
         const panel = this.shadowRoot.querySelector(".panel.open");
         if (!panel) {
             return;
         }
         const gap = 8;
-        let left = 0;
-        let top = 0;
         if (this.dock === "bottom") {
-            top = -(panel.offsetHeight + gap);
+            this.place(0, null, bar.offsetHeight + gap);
         } else if (this.dock === "top") {
-            top = bar.height + gap;
+            this.place(0, bar.offsetHeight + gap, null);
         } else if (this.dock === "left") {
-            left = bar.width + gap;
+            this.place(bar.offsetWidth + gap, null, 0);
         } else {
-            left = -(panel.offsetWidth + gap);
+            this.place(-(panel.offsetWidth + gap), null, 0);
         }
-        this.place(left, top);
     }
 
-    place(left, top) {
+    restorePanel() {
+        const pos = this.panelPos;
+        const panel = this.shadowRoot.querySelector(".panel.open");
+        if (!pos || !panel) {
+            return;
+        }
+        if (typeof pos.bottom === "number") {
+            this.place(pos.left, null, pos.bottom);
+            return;
+        }
+        if (this.growsUp()) {
+            const bottom = this.offsetHeight - pos.top - panel.offsetHeight;
+            this.place(pos.left, null, bottom);
+            return;
+        }
+        this.place(pos.left, pos.top, null);
+    }
+
+    place(left, top, bottom) {
         const panels = [...this.shadowRoot.querySelectorAll(".panel")];
         const open = this.shadowRoot.querySelector(".panel.open");
-        const apply = (x, y) => {
+        const edge = bottom == null ? "top" : "bottom";
+        let x = left;
+        let y = edge === "bottom" ? bottom : top;
+        const apply = () => {
             for (const panel of panels) {
                 panel.style.left = x + "px";
-                panel.style.top = y + "px";
+                if (edge === "bottom") {
+                    panel.style.top = "auto";
+                    panel.style.bottom = y + "px";
+                } else {
+                    panel.style.bottom = "auto";
+                    panel.style.top = y + "px";
+                }
             }
         };
-        apply(left, top);
-        let x = left;
-        let y = top;
+        apply();
+        this.limitPanel(open);
         if (open) {
             const rect = open.getBoundingClientRect();
             const margin = 8;
@@ -1275,17 +1440,56 @@ class DoskaToolbar extends HTMLElement {
                 } else if (rect.right > window.innerWidth - margin) {
                     x += window.innerWidth - margin - rect.right;
                 }
-                if (rect.top < margin) {
-                    y += margin - rect.top;
+                if (edge === "top") {
+                    if (rect.top < margin) {
+                        y += margin - rect.top;
+                    } else if (rect.bottom > window.innerHeight - margin) {
+                        y += window.innerHeight - margin - rect.bottom;
+                    }
                 } else if (rect.bottom > window.innerHeight - margin) {
-                    y += window.innerHeight - margin - rect.bottom;
+                    y += rect.bottom - (window.innerHeight - margin);
                 }
             }
         }
-        if (x !== left || y !== top) {
-            apply(x, y);
+        if (x !== left || y !== (edge === "bottom" ? bottom : top)) {
+            apply();
+            this.limitPanel(open);
         }
-        this.panelPos = { left: x, top: y };
+        this.panelPos = edge === "bottom" ? { left: x, bottom: y } : { left: x, top: y };
+    }
+
+    limitPanel(panel) {
+        if (!panel) {
+            return;
+        }
+        const rect = panel.getBoundingClientRect();
+        if (rect.height === 0) {
+            return;
+        }
+        const margin = 8;
+        const up = panel.style.top === "auto";
+        const available = up ? rect.bottom - margin : window.innerHeight - rect.top - margin;
+        panel.style.maxHeight = Math.max(160, Math.floor(available)) + "px";
+    }
+
+    keepCaret() {
+        const wrap = this.editor?.parentElement;
+        const selection = window.getSelection();
+        if (!wrap || !selection || selection.rangeCount === 0 || !this.editor.contains(selection.anchorNode)) {
+            return;
+        }
+        const range = selection.getRangeAt(0).cloneRange();
+        range.collapse(false);
+        const rect = range.getClientRects()[0];
+        if (!rect) {
+            return;
+        }
+        const box = wrap.getBoundingClientRect();
+        if (rect.bottom > box.bottom - 4) {
+            wrap.scrollTop += rect.bottom - box.bottom + 12;
+        } else if (rect.top < box.top + 4) {
+            wrap.scrollTop -= box.top - rect.top + 12;
+        }
     }
 
     setTool(next) {
@@ -1336,6 +1540,8 @@ class DoskaToolbar extends HTMLElement {
             this.copyFindings();
         } else if (button.dataset.dock) {
             this.setDock(button.dataset.dock);
+        } else if (button.hasAttribute("data-mode-toggle")) {
+            this.toggleMode();
         } else if (button.dataset.issue !== undefined) {
             this.showIssue(Number(button.dataset.issue));
         } else if (button.hasAttribute("data-note-delete-confirm")) {
@@ -1381,7 +1587,15 @@ class DoskaToolbar extends HTMLElement {
             return;
         }
         const host = this.getBoundingClientRect();
-        this.place(event.clientX - this.drag.ox - host.left, event.clientY - this.drag.oy - host.top);
+        const panel = this.shadowRoot.querySelector(".panel.open");
+        const left = event.clientX - this.drag.ox - host.left;
+        if (this.growsUp() && panel) {
+            const desiredTop = event.clientY - this.drag.oy;
+            const bottom = host.bottom - (desiredTop + panel.offsetHeight);
+            this.place(left, null, bottom);
+        } else {
+            this.place(left, event.clientY - this.drag.oy - host.top, null);
+        }
     }
 
     gripUp() {
@@ -1570,7 +1784,7 @@ class DoskaToolbar extends HTMLElement {
                     "Content-Type": "application/json",
                     Accept: "application/json",
                 },
-                body: JSON.stringify(noteBody(this.config, content)),
+                body: JSON.stringify(noteBody(this.config, content, this.mode)),
             });
             this.sendLabel.textContent = response.ok ? "Added" : "Add failed";
         } catch {
@@ -1590,7 +1804,7 @@ class DoskaToolbar extends HTMLElement {
     async copy() {
         const content = this.editorContent();
         this.chips = content.chips;
-        await this.writeClipboard(buildPrompt(this.config, content.chips, content.text));
+        await this.writeClipboard(buildPrompt(this.config, content.chips, content.text, this.mode));
         this.copyLabel.textContent = "Copied";
         window.setTimeout(() => {
             if (this.copyLabel.textContent === "Copied") {

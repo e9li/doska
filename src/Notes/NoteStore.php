@@ -12,8 +12,10 @@ namespace Doska\Notes;
  */
 final class NoteStore
 {
-    public function __construct(private readonly string $projectDir)
-    {
+    public function __construct(
+        private readonly string $projectDir,
+        private readonly string $relativePath = 'var/doska/notes.json',
+    ) {
     }
 
     /**
@@ -23,6 +25,7 @@ final class NoteStore
      *     controller: ?string,
      *     source: ?string,
      *     route: ?string,
+     *     mode: ?string,
      *     elements: list<array<string, mixed>>
      * } $input
      *
@@ -38,6 +41,7 @@ final class NoteStore
             'controller' => $input['controller'],
             'source' => $input['source'],
             'route' => $input['route'],
+            'mode' => $input['mode'] ?? null,
             'elements' => $input['elements'],
             'replies' => [],
             'createdAt' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
@@ -332,6 +336,6 @@ final class NoteStore
 
     private function path(): string
     {
-        return rtrim($this->projectDir, '/').'/var/doska/notes.json';
+        return rtrim($this->projectDir, '/').'/'.ltrim($this->relativePath, '/');
     }
 }

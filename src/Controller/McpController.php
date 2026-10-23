@@ -76,7 +76,7 @@ final class McpController
             return $this->success($id, [
                 'protocolVersion' => '2025-03-26',
                 'capabilities' => ['tools' => ['listChanged' => false]],
-                'serverInfo' => ['name' => 'doska', 'version' => '0.1.0'],
+                'serverInfo' => ['name' => 'doska', 'version' => '0.2.0'],
                 'instructions' => 'List pending notes with doska_get_pending, acknowledge one, open its file and line, '
                     .'edit, then resolve with a one-line summary. '
                     .'This endpoint is stateless HTTP: do not open a session.',

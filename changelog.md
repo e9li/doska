@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-23
+
+- 0.2.0. Kirby plugin `doska/kirby`, in this repository next to the Symfony bundle. It annotates PHP snippets with the same HTML comments, injects the toolbar, and serves notes and MCP under `/_doska`. The Symfony bundle is unchanged. The release is git tag `v0.2.0`. The Kirby package records the same version in `kirby/composer.json`, because a path install has no tag of its own.
+- A Kirby page has one Dev / Content toggle on the toolbar. The button shows the current mode. Dev leads the prompt with the PHP snippet. Content leads with the content file, field, block id, and type. The default is Dev. Both addresses stay on the note. Symfony prompts have no mode.
+- The prompt grows upward when the bar is on the bottom, left, or right, and downward when the bar is on top. The footer and the bar stay on the page. Extra text scrolls inside the prompt.
+- Toolbar buttons have tooltips: Inspect, Accessibility, Notes, Position, and on Kirby the Dev or Content toggle.
+- A Kirby browser request does not read or write the pages cache. The cache warmer is left alone. Notes are stored in `site/cache/doska/notes.json`.
+
 ## 2026-10-16
 
 - Notes panel lists every stored note, newest first, and filters by pending, acknowledged, resolved, and dismissed. A note on this page scrolls to its element. A note on another page opens that page. The clipboard icon opens the panel.

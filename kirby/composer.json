@@ -1,0 +1,43 @@
+{
+    "name": "doska/kirby",
+    "description": "Dev-only Kirby toolbar. Point at an element, write a note, and copy a prompt that names the template, the snippet, and the content field.",
+    "type": "kirby-plugin",
+    "license": "MIT",
+    "version": "0.2.0",
+    "authors": [
+        {
+            "name": "Rafael Egli",
+            "email": "rafael@e9li.com",
+            "homepage": "https://www.e9li.com"
+        }
+    ],
+    "support": {
+        "source": "https://git.e9li.com/e9li/doska",
+        "issues": "https://github.com/e9li/doska/issues"
+    },
+    "keywords": [
+        "kirby",
+        "kirby-cms",
+        "kirby-plugin",
+        "doska"
+    ],
+    "require": {
+        "php": ">=8.2",
+        "getkirby/composer-installer": "^1.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Doska\\Kirby\\": "src/"
+        }
+    },
+    "extra": {
+        "installer-name": "doska",
+        "kirby-cms-path": false
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "getkirby/composer-installer": true
+        }
+    }
+}

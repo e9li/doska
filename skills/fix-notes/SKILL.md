@@ -1,11 +1,11 @@
 ---
 name: fix-notes
-description: Work through notes a person added from the Doska toolbar on a running Symfony app. List them with the doska MCP tools, open the Twig file and line on each pinned element, edit, and resolve. Use when the user says "check Doska", "fix the notes", "pending notes", or wants the agent to pick up a note from the page.
+description: Work through notes a person added from the Doska toolbar on a running Symfony or Kirby app. List them with the doska MCP tools, open the file and line on each pinned element, edit, and resolve. Use when the user says "check Doska", "fix the notes", "pending notes", or wants the agent to pick up a note from the page.
 ---
 
 # Fix Doska notes
 
-Doska is a dev-only toolbar on the Symfony app. Add stores a note. The MCP tools are how an agent reads it. Copy prompt is a separate clipboard path and is not this loop. Delete removes a note from the toolbar and does not resolve it.
+Doska is a dev-only toolbar. On Symfony the note names the Twig file. On Kirby it can also name the content file. Add stores a note. The MCP tools are how an agent reads it. Copy prompt is a separate clipboard path and is not this loop. Delete removes a note from the toolbar and does not resolve it.
 
 The tools are `doska_get_pending`, `doska_get_note`, `doska_acknowledge`, `doska_resolve`, `doska_dismiss`, and `doska_reply`.
 
@@ -14,20 +14,20 @@ If those tools are not in this session, the app has to be running and the endpoi
 Claude Code:
 
 ```bash
-claude mcp add --transport http doska https://drehscheibe.test/_doska/mcp
+claude mcp add --transport http doska https://app.test/_doska/mcp
 ```
 
 Codex, in `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.doska]
-url = "https://drehscheibe.test/_doska/mcp"
+url = "https://app.test/_doska/mcp"
 ```
 
 Grok:
 
 ```bash
-grok mcp add --transport http doska https://drehscheibe.test/_doska/mcp
+grok mcp add --transport http doska https://app.test/_doska/mcp
 ```
 
 Kimi Code, in `~/.kimi-code/mcp.json`. A `url` with no `transport` is HTTP:
@@ -36,7 +36,7 @@ Kimi Code, in `~/.kimi-code/mcp.json`. A `url` with no `transport` is HTTP:
 {
   "mcpServers": {
     "doska": {
-      "url": "https://drehscheibe.test/_doska/mcp"
+      "url": "https://app.test/_doska/mcp"
     }
   }
 }
@@ -63,3 +63,7 @@ A pending note cannot be resolved. A resolved or dismissed note cannot change ag
 - Call `doska_get_note` when the reply thread matters.
 
 `doska_watch_notes` does not exist. Poll `doska_get_pending` only when the user asks to check again.
+
+## Kirby
+
+The toolbar toggle sets `mode` before Add. `content` means edit the content file and field named in the element stack (`content`, `field`, `block`, `type`). Leave the PHP alone. `dev` means edit the PHP snippet or template. Leave the content file alone. A note with no `mode` is a Symfony note. The endpoint is still `POST /_doska/mcp` on that site. PHP snippets have no tag line. `line` is the snippet start, and `caller` is the include.
