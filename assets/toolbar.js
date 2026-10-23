@@ -1472,10 +1472,23 @@ class DoskaToolbar extends HTMLElement {
         panel.style.maxHeight = Math.max(160, Math.floor(available)) + "px";
     }
 
+    editorSelection() {
+        const root = this.editor?.getRootNode();
+        const shadow = root && typeof root.getSelection === "function" ? root.getSelection() : null;
+        if (shadow && shadow.rangeCount > 0) {
+            const anchor = shadow.anchorNode;
+            if (anchor === this.editor || this.editor.contains(anchor)) {
+                return shadow;
+            }
+        }
+        return window.getSelection();
+    }
+
     keepCaret() {
         const wrap = this.editor?.parentElement;
-        const selection = window.getSelection();
-        if (!wrap || !selection || selection.rangeCount === 0 || !this.editor.contains(selection.anchorNode)) {
+        const selection = this.editorSelection();
+        const anchor = selection?.anchorNode;
+        if (!wrap || !selection || selection.rangeCount === 0 || (anchor !== this.editor && !this.editor.contains(anchor))) {
             return;
         }
         const range = selection.getRangeAt(0).cloneRange();
@@ -1687,7 +1700,6 @@ class DoskaToolbar extends HTMLElement {
             return;
         }
         this.addChip(elementInfo(el));
-        this.editor.focus();
     }
 
     addChip(info) {
@@ -1711,9 +1723,30 @@ class DoskaToolbar extends HTMLElement {
             this.noteChanged();
         });
         this.chips.push(info);
-        this.editor.append(chip, document.createTextNode(" "));
+        const space = document.createTextNode(" ");
+        this.editor.append(chip, space);
         this.syncPlaceholder();
         this.noteChanged();
+        this.editor.focus({ preventScroll: true });
+        this.placeCaretAfter(space);
+    }
+
+    placeCaretAfter(node) {
+        const range = document.createRange();
+        if (node.nodeType === Node.TEXT_NODE) {
+            range.setStart(node, node.length);
+        } else {
+            range.setStartAfter(node);
+        }
+        range.collapse(true);
+        const root = this.editor.getRootNode();
+        const selection = typeof root.getSelection === "function" ? root.getSelection() : window.getSelection();
+        if (!selection) {
+            return;
+        }
+        selection.removeAllRanges();
+        selection.addRange(range);
+        this.keepCaret();
     }
 
     syncPlaceholder() {

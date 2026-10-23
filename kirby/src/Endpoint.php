@@ -98,7 +98,7 @@ final class Endpoint
             return self::result($id, [
                 'protocolVersion' => '2025-03-26',
                 'capabilities' => ['tools' => ['listChanged' => false]],
-                'serverInfo' => ['name' => 'doska', 'version' => '0.2.0'],
+                'serverInfo' => ['name' => 'doska', 'version' => '0.2.1'],
                 'instructions' => 'List pending notes with doska_get_pending, acknowledge one, open its file and line, '
                     .'edit, then resolve with a one-line summary. '
                     .'On a Kirby note, mode is dev or content. Dev edits the PHP. Content edits the field named in the element stack. '

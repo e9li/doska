@@ -2,6 +2,7 @@
 
 ## 2026-10-23
 
+- 0.2.1. Selecting an element places the writing cursor after the badge in the prompt. The release is git tag `v0.2.1`. Both packages record `0.2.1` in `composer.json`.
 - 0.2.0. Kirby plugin `doska/kirby`, in this repository next to the Symfony bundle. It annotates PHP snippets with the same HTML comments, injects the toolbar, and serves notes and MCP under `/_doska`. The Symfony bundle is unchanged. The release is git tag `v0.2.0`. Both packages record `0.2.0` in `composer.json`.
 - A Kirby page has one Dev / Content toggle on the toolbar. The button shows the current mode. Dev leads the prompt with the PHP snippet. Content leads with the content file, field, block id, and type. The default is Dev. Both addresses stay on the note. Symfony prompts have no mode.
 - The prompt grows upward when the bar is on the bottom, left, or right, and downward when the bar is on top. The footer and the bar stay on the page. Extra text scrolls inside the prompt.

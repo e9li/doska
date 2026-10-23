@@ -3,7 +3,7 @@
     "description": "Dev-only toolbar that turns a clicked element into a Symfony-aware prompt: controller, Twig file and line, and UX component.",
     "type": "symfony-bundle",
     "license": "MIT",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "require": {
         "php": ">=8.4",
         "symfony/framework-bundle": "^7.4 || ^8.0",

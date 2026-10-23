@@ -3,7 +3,7 @@
     "description": "Dev-only Kirby toolbar. Point at an element, write a note, and copy a prompt that names the template, the snippet, and the content field.",
     "type": "kirby-plugin",
     "license": "MIT",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "authors": [
         {
             "name": "Rafael Egli",
