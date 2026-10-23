@@ -196,6 +196,12 @@ The package is not on Packagist yet. Point Composer at the `kirby` directory of 
 
 `getkirby/composer-installer` puts the plugin in `site/plugins/doska`.
 
+## Support this project
+
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa)](https://github.com/sponsors/e9li)
+
+This project is free and open source, including for commercial use. If it creates value for you or your business, please consider [sponsoring its development](https://github.com/sponsors/e9li). Sponsorship helps fund ongoing maintenance and future improvements.
+
 ## License
 
 [MIT](LICENSE)
