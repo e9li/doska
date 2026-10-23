@@ -1,3 +1,13 @@
 /vendor/
 /.phpunit.cache/
 /composer.lock
+/.zed/
+/.zed
+/.claude
+.claude
+/.delta
+.delta
+/.opencode
+.opencode
+/.playwright-mcp
+.playwright-mcp
